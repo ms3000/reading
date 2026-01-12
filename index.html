@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#4F46E5">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="AI독후감">
+  <title>AI 독후감 생성기</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    ::-webkit-scrollbar { display: none; }
+    * { scrollbar-width: none; -webkit-tap-highlight-color: transparent; }
+    .splash { position: fixed; inset: 0; background: linear-gradient(135deg, #EEF2FF 0%, #E9D5FF 100%); display: flex; align-items: center; justify-content: center; z-index: 9999; transition: opacity 0.5s; }
+    .splash.hide { opacity: 0; pointer-events: none; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .animate-spin { animation: spin 1s linear infinite; }
+  </style>
+</head>
+<body>
+  <div id="splash" class="splash">
+    <div class="text-center">
+      <div class="text-6xl mb-4">📚</div>
+      <div class="text-xl font-bold text-indigo-600">AI 독후감</div>
+      <div class="text-sm text-gray-500 mt-2">로딩 중...</div>
+    </div>
+  </div>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/recharts@2.8.0/umd/Recharts.min.js"></script>
+  <script>
+    // Lucide Icons
+    const icons={Book:'<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',Camera:'<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>',Plus:'<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',ArrowLeft:'<line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>',Trash2:'<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>',Edit3:'<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>',Sparkles:'<path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/>',FileText:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>',Calendar:'<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',X:'<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',Check:'<polyline points="20 6 9 17 4 12"/>',Loader2:'<path d="M21 12a9 9 0 1 1-6.219-8.56"/>',Search:'<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',BarChart3:'<path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>',Download:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',ImageIcon:'<rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>',Home:'<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>'};
+    function Icon({name,className}){return React.createElement('svg',{className,width:24,height:24,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:2,strokeLinecap:'round',strokeLinejoin:'round',dangerouslySetInnerHTML:{__html:icons[name]||''}});}
+
+    // IndexedDB
+    const DB_NAME='BookReaderDB',DB_VERSION=1;
+    const openDB=()=>new Promise((res,rej)=>{const r=indexedDB.open(DB_NAME,DB_VERSION);r.onerror=()=>rej(r.error);r.onsuccess=()=>res(r.result);r.onupgradeneeded=e=>{const db=e.target.result;if(!db.objectStoreNames.contains('books')){const bs=db.createObjectStore('books',{keyPath:'id'});bs.createIndex('status','status');}if(!db.objectStoreNames.contains('passages')){const ps=db.createObjectStore('passages',{keyPath:'id'});ps.createIndex('bookId','bookId');}if(!db.objectStoreNames.contains('reviews'))db.createObjectStore('reviews',{keyPath:'bookId'});};});
+    const dbOp=async(store,mode,op)=>{const db=await openDB();return new Promise((res,rej)=>{const tx=db.transaction(store,mode);const s=tx.objectStore(store);const req=op(s);req.onsuccess=()=>res(req.result);req.onerror=()=>rej(req.error);});};
+
+    // Claude API
+    const callClaudeAPI=async(messages,apiKey)=>{
+      const res=await fetch('https://api.anthropic.com/v1/messages',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+        body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:3000,messages})
+      });
+      const data=await res.json();
+      if(data.error)throw new Error(data.error.message);
+      return data.content?.[0]?.text||'';
+    };
+
+    const CATEGORIES=['자기계발','소설','에세이','경제/경영','과학','역사','철학','기타'];
+    const COLORS=['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#6b7280'];
+    const{useState,useEffect,useRef}=React;
+    const{PieChart,Pie,Cell,BarChart,Bar,XAxis,YAxis,Tooltip,ResponsiveContainer}=Recharts;
+
+    function App(){
+      const[view,setView]=useState('home');
+      const[books,setBooks]=useState([]);
+      const[allPassages,setAllPassages]=useState([]);
+      const[selectedBook,setSelectedBook]=useState(null);
+      const[passages,setPassages]=useState([]);
+      const[showAddBook,setShowAddBook]=useState(false);
+      const[newBook,setNewBook]=useState({title:'',author:'',category:'자기계발'});
+      const[capturedImage,setCapturedImage]=useState(null);
+      const[extractedText,setExtractedText]=useState('');
+      const[aiAnalysis,setAiAnalysis]=useState('');
+      const[isProcessing,setIsProcessing]=useState(false);
+      const[review,setReview]=useState(null);
+      const[editingPassage,setEditingPassage]=useState(null);
+      const[searchQuery,setSearchQuery]=useState('');
+      const[searchResults,setSearchResults]=useState([]);
+      const[apiKey,setApiKey]=useState('');
+      const[showApiKey,setShowApiKey]=useState(false);
+      const videoRef=useRef(null);
+      const canvasRef=useRef(null);
+      const fileInputRef=useRef(null);
+
+      useEffect(()=>{loadBooks();loadAllPassages();const k=localStorage.getItem('claude_api_key');if(k)setApiKey(k);},[]);
+      
+      const loadBooks=async()=>{try{const r=await dbOp('books','readonly',s=>s.getAll());setBooks(r||[]);}catch(e){console.error(e);}};
+      const loadAllPassages=async()=>{try{const r=await dbOp('passages','readonly',s=>s.getAll());setAllPassages(r||[]);}catch(e){console.error(e);}};
+      const loadPassages=async(bookId)=>{try{const r=await dbOp('passages','readonly',s=>s.index('bookId').getAll(bookId));setPassages(r||[]);}catch(e){console.error(e);}};
+      
+      const addBook=async()=>{if(!newBook.title.trim())return;const book={id:Date.now().toString(),...newBook,status:'reading',createdAt:new Date().toISOString()};await dbOp('books','readwrite',s=>s.add(book));setNewBook({title:'',author:'',category:'자기계발'});setShowAddBook(false);loadBooks();};
+      
+      const deleteBook=async(id)=>{const confirmed=window.confirm('이 책과 모든 글귀를 삭제하시겠습니까?');if(!confirmed)return;try{await dbOp('books','readwrite',s=>s.delete(id));const ps=await dbOp('passages','readonly',s=>s.index('bookId').getAll(id));for(const p of ps)await dbOp('passages','readwrite',s=>s.delete(p.id));await loadBooks();await loadAllPassages();}catch(e){console.error(e);alert('삭제 중 오류가 발생했습니다.');}};
+      
+      const selectBook=async(book)=>{setSelectedBook(book);await loadPassages(book.id);setView('book-detail');};
+      
+      const startCamera=async()=>{setView('camera');try{const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1920},height:{ideal:1080}}});if(videoRef.current)videoRef.current.srcObject=stream;}catch(e){alert('카메라 접근 권한이 필요합니다.');setView('book-detail');}};
+      const stopCamera=()=>{if(videoRef.current?.srcObject)videoRef.current.srcObject.getTracks().forEach(t=>t.stop());};
+      const capturePhoto=()=>{const v=videoRef.current,c=canvasRef.current;if(v&&c){c.width=v.videoWidth;c.height=v.videoHeight;c.getContext('2d').drawImage(v,0,0);const img=c.toDataURL('image/jpeg',0.8);setCapturedImage(img);stopCamera();setView('analyze');processImage(img);}};
+      
+      const handleFileSelect=(e)=>{const file=e.target.files?.[0];if(file){const reader=new FileReader();reader.onload=(ev)=>{const img=ev.target.result;setCapturedImage(img);setView('analyze');processImage(img);};reader.readAsDataURL(file);}};
+      
+      const processImage=async(imageData)=>{if(!apiKey){setShowApiKey(true);return;}setIsProcessing(true);try{const b64=imageData.split(',')[1];const text=await callClaudeAPI([{role:'user',content:[{type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},{type:'text',text:`이 책 페이지 이미지에서 텍스트를 추출해주세요. 다음 형식으로 응답:\n[핵심 글귀]\n(가장 인상적인 문장 1-3개)\n[AI 분석]\n- 의미: (해석)\n- 첨언: (조언)\n- 적용: (일상 적용법)`}]}],apiKey);const keyMatch=text.match(/\[핵심 글귀\]\n?([\s\S]*?)(?=\[AI 분석\]|$)/);const anaMatch=text.match(/\[AI 분석\]\n?([\s\S]*?)$/);setExtractedText(keyMatch?keyMatch[1].trim():text);setAiAnalysis(anaMatch?anaMatch[1].trim():'');}catch(e){console.error(e);alert('처리 중 오류가 발생했습니다: '+e.message);}setIsProcessing(false);};
+      
+      const savePassage=async()=>{const p={id:Date.now().toString(),bookId:selectedBook.id,imageUrl:capturedImage,text:extractedText,analysis:aiAnalysis,capturedAt:new Date().toISOString()};await dbOp('passages','readwrite',s=>s.add(p));setCapturedImage(null);setExtractedText('');setAiAnalysis('');await loadPassages(selectedBook.id);loadAllPassages();setView('book-detail');};
+      
+      const deletePassage=async(id)=>{const confirmed=window.confirm('이 글귀를 삭제하시겠습니까?');if(!confirmed)return;try{await dbOp('passages','readwrite',s=>s.delete(id));await loadPassages(selectedBook.id);await loadAllPassages();}catch(e){console.error(e);alert('삭제 중 오류가 발생했습니다.');}};
+      
+      const updatePassage=async(p)=>{await dbOp('passages','readwrite',s=>s.put(p));setEditingPassage(null);loadPassages(selectedBook.id);loadAllPassages();};
+      
+      const generateReview=async()=>{if(!apiKey){setShowApiKey(true);return;}if(passages.length===0){alert('저장된 글귀가 없습니다.');return;}setIsProcessing(true);setView('review');try{const txt=passages.map((p,i)=>`${i+1}. "${p.text}"\n   분석: ${p.analysis}`).join('\n\n');const reviewText=await callClaudeAPI([{role:'user',content:`"${selectedBook.title}" (저자: ${selectedBook.author||'미상'}) 글귀들:\n\n${txt}\n\n이 글귀들로 개인적인 독후감 작성:\n1. 책 소개\n2. 인상 깊었던 부분\n3. 얻은 깨달음\n4. 삶에 적용할 점\n5. 총평`}],apiKey);setReview(reviewText);await dbOp('reviews','readwrite',s=>s.put({bookId:selectedBook.id,content:reviewText,generatedAt:new Date().toISOString()}));}catch(e){console.error(e);alert('오류 발생: '+e.message);}setIsProcessing(false);};
+      
+      const completeBook=async()=>{const ub={...selectedBook,status:'completed'};await dbOp('books','readwrite',s=>s.put(ub));setSelectedBook(ub);loadBooks();generateReview();};
+      
+      const exportReview=(format)=>{if(!review)return;const content=`📚 ${selectedBook.title}\n${selectedBook.author?`저자: ${selectedBook.author}\n`:''}\n${review}`;if(format==='text'){const blob=new Blob([content],{type:'text/plain;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`독후감_${selectedBook.title}.txt`;a.click();URL.revokeObjectURL(url);}else if(format==='copy'){navigator.clipboard.writeText(content);alert('클립보드에 복사되었습니다!');}};
+      
+      const searchPassages=(q)=>{setSearchQuery(q);if(!q.trim()){setSearchResults([]);return;}const results=allPassages.filter(p=>p.text?.toLowerCase().includes(q.toLowerCase())||p.analysis?.toLowerCase().includes(q.toLowerCase()));setSearchResults(results);};
+      
+      const saveApiKey=()=>{localStorage.setItem('claude_api_key',apiKey);setShowApiKey(false);if(capturedImage)processImage(capturedImage);};
+      
+      const fmt=(d)=>{const dt=new Date(d);return`${dt.getFullYear()}.${dt.getMonth()+1}.${dt.getDate()}`;};
+
+      const stats={totalBooks:books.length,readingBooks:books.filter(b=>b.status==='reading').length,completedBooks:books.filter(b=>b.status==='completed').length,totalPassages:allPassages.length,categoryData:CATEGORIES.map(c=>({name:c,value:books.filter(b=>b.category===c).length})).filter(d=>d.value>0),monthlyData:(()=>{const months={};allPassages.forEach(p=>{const m=new Date(p.capturedAt).toISOString().slice(0,7);months[m]=(months[m]||0)+1;});return Object.entries(months).slice(-6).map(([m,v])=>({month:m.slice(5)+'월',count:v}));})()};
+
+      const ApiKeyModal=()=>React.createElement('div',{className:'fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4'},React.createElement('div',{className:'bg-white rounded-2xl p-6 w-full max-w-md'},React.createElement('h3',{className:'text-lg font-bold mb-4'},'Claude API Key 설정'),React.createElement('input',{type:'password',value:apiKey,onChange:e=>setApiKey(e.target.value),placeholder:'sk-ant-...',className:'w-full p-3 border rounded-xl mb-4'}),React.createElement('p',{className:'text-xs text-gray-500 mb-4'},'API 키는 브라우저에만 저장됩니다.'),React.createElement('div',{className:'flex gap-2'},React.createElement('button',{onClick:()=>setShowApiKey(false),className:'flex-1 p-3 border rounded-xl'},'취소'),React.createElement('button',{onClick:saveApiKey,className:'flex-1 p-3 bg-indigo-600 text-white rounded-xl'},'저장'))));
+
+      const BottomNav=()=>React.createElement('div',{className:'fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around py-2 z-40'},React.createElement('button',{onClick:()=>{setView('home');setSelectedBook(null);},className:`flex flex-col items-center p-2 ${view==='home'?'text-indigo-600':'text-gray-400'}`},React.createElement(Icon,{name:'Home',className:'w-5 h-5'}),React.createElement('span',{className:'text-xs mt-1'},'홈')),React.createElement('button',{onClick:()=>setView('search'),className:`flex flex-col items-center p-2 ${view==='search'?'text-indigo-600':'text-gray-400'}`},React.createElement(Icon,{name:'Search',className:'w-5 h-5'}),React.createElement('span',{className:'text-xs mt-1'},'검색')),React.createElement('button',{onClick:()=>setView('gallery'),className:`flex flex-col items-center p-2 ${view==='gallery'?'text-indigo-600':'text-gray-400'}`},React.createElement(Icon,{name:'ImageIcon',className:'w-5 h-5'}),React.createElement('span',{className:'text-xs mt-1'},'갤러리')),React.createElement('button',{onClick:()=>setView('stats'),className:`flex flex-col items-center p-2 ${view==='stats'?'text-indigo-600':'text-gray-400'}`},React.createElement(Icon,{name:'BarChart3',className:'w-5 h-5'}),React.createElement('span',{className:'text-xs mt-1'},'통계')));
+
+      // HOME
+      if(view==='home'){
+        return React.createElement('div',{className:'min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 pb-20'},
+          showApiKey&&React.createElement(ApiKeyModal),
+          React.createElement('div',{className:'p-4'},
+            React.createElement('div',{className:'flex items-center justify-between mb-6'},
+              React.createElement('div',null,React.createElement('h1',{className:'text-2xl font-bold text-gray-800'},'📚 AI 독후감'),React.createElement('p',{className:'text-sm text-gray-500'},'나만의 독서 기록')),
+              React.createElement('button',{onClick:()=>setShowApiKey(true),className:`px-3 py-1 text-xs rounded-full ${apiKey?'bg-green-100 text-green-700':'bg-red-100 text-red-700'}`},apiKey?'API 연결됨 ✓':'API 키 설정')),
+            books.length===0?
+              React.createElement('div',{className:'text-center py-20'},React.createElement(Icon,{name:'Book',className:'w-16 h-16 mx-auto text-gray-300 mb-4'}),React.createElement('p',{className:'text-gray-500 mb-4'},'등록된 책이 없습니다'),React.createElement('button',{onClick:()=>setShowAddBook(true),className:'px-6 py-3 bg-indigo-600 text-white rounded-xl'},'첫 번째 책 추가')):
+              React.createElement('div',{className:'space-y-3'},books.map(book=>React.createElement('div',{key:book.id,className:'bg-white rounded-2xl p-4 shadow-sm',onClick:()=>selectBook(book)},React.createElement('div',{className:'flex items-start justify-between'},React.createElement('div',{className:'flex-1'},React.createElement('div',{className:'flex items-center gap-2 mb-1'},React.createElement('span',{className:`px-2 py-0.5 text-xs rounded-full ${book.status==='completed'?'bg-green-100 text-green-700':'bg-indigo-100 text-indigo-700'}`},book.status==='completed'?'완독':'읽는 중'),React.createElement('span',{className:'text-xs text-gray-400'},book.category)),React.createElement('h3',{className:'font-bold text-gray-800'},book.title),book.author&&React.createElement('p',{className:'text-sm text-gray-500'},book.author),React.createElement('p',{className:'text-xs text-gray-400 mt-1'},`${fmt(book.createdAt)} · 글귀 ${allPassages.filter(p=>p.bookId===book.id).length}개`)),React.createElement('button',{onClick:e=>{e.preventDefault();e.stopPropagation();deleteBook(book.id);},className:'p-3 text-gray-400 hover:text-red-500 active:bg-red-50 rounded-full'},React.createElement(Icon,{name:'Trash2',className:'w-5 h-5'}))))))),
+          React.createElement('button',{onClick:()=>setShowAddBook(true),className:'fixed bottom-20 right-4 w-14 h-14 bg-indigo-600 text-white rounded-full shadow-lg flex items-center justify-center'},React.createElement(Icon,{name:'Plus',className:'w-6 h-6'})),
+          showAddBook&&React.createElement('div',{className:'fixed inset-0 bg-black/50 flex items-end z-50'},React.createElement('div',{className:'bg-white rounded-t-3xl p-6 w-full'},React.createElement('h3',{className:'text-lg font-bold mb-4'},'새 책 추가'),React.createElement('input',{value:newBook.title,onChange:e=>setNewBook({...newBook,title:e.target.value}),placeholder:'책 제목',className:'w-full p-3 border rounded-xl mb-3'}),React.createElement('input',{value:newBook.author,onChange:e=>setNewBook({...newBook,author:e.target.value}),placeholder:'저자 (선택)',className:'w-full p-3 border rounded-xl mb-3'}),React.createElement('select',{value:newBook.category,onChange:e=>setNewBook({...newBook,category:e.target.value}),className:'w-full p-3 border rounded-xl mb-4'},CATEGORIES.map(c=>React.createElement('option',{key:c,value:c},c))),React.createElement('div',{className:'flex gap-2'},React.createElement('button',{onClick:()=>setShowAddBook(false),className:'flex-1 p-3 border rounded-xl'},'취소'),React.createElement('button',{onClick:addBook,className:'flex-1 p-3 bg-indigo-600 text-white rounded-xl'},'추가')))),
+          React.createElement(BottomNav));
+      }
+
+      // SEARCH
+      if(view==='search'){
+        return React.createElement('div',{className:'min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 pb-20'},React.createElement('div',{className:'p-4'},React.createElement('h2',{className:'text-xl font-bold mb-4'},'🔍 글귀 검색'),React.createElement('div',{className:'relative mb-4'},React.createElement(Icon,{name:'Search',className:'absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400'}),React.createElement('input',{value:searchQuery,onChange:e=>searchPassages(e.target.value),placeholder:'검색어 입력...',className:'w-full pl-10 pr-4 py-3 bg-white rounded-xl border'})),searchQuery&&React.createElement('p',{className:'text-sm text-gray-500 mb-3'},`${searchResults.length}개 결과`),React.createElement('div',{className:'space-y-3'},searchResults.map(p=>{const book=books.find(b=>b.id===p.bookId);return React.createElement('div',{key:p.id,className:'bg-white rounded-xl p-4 shadow-sm'},React.createElement('p',{className:'text-xs text-indigo-600 font-medium mb-1'},book?.title),React.createElement('p',{className:'text-gray-800'},`"${p.text}"`),React.createElement('p',{className:'text-xs text-gray-400 mt-2'},fmt(p.capturedAt)));}))),React.createElement(BottomNav));
+      }
+
+      // GALLERY
+      if(view==='gallery'){
+        const images=allPassages.filter(p=>p.imageUrl);
+        return React.createElement('div',{className:'min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 pb-20'},React.createElement('div',{className:'p-4'},React.createElement('h2',{className:'text-xl font-bold mb-4'},'🖼️ 이미지 갤러리'),images.length===0?React.createElement('div',{className:'text-center py-20'},React.createElement(Icon,{name:'ImageIcon',className:'w-16 h-16 mx-auto text-gray-300 mb-4'}),React.createElement('p',{className:'text-gray-500'},'저장된 이미지가 없습니다')):React.createElement('div',{className:'grid grid-cols-2 gap-2'},images.map(p=>{const book=books.find(b=>b.id===p.bookId);return React.createElement('div',{key:p.id,className:'relative aspect-[3/4] rounded-xl overflow-hidden bg-white shadow-sm'},React.createElement('img',{src:p.imageUrl,alt:'',className:'w-full h-full object-cover'}),React.createElement('div',{className:'absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2'},React.createElement('p',{className:'text-white text-xs font-medium truncate'},book?.title),React.createElement('p',{className:'text-white/70 text-xs'},fmt(p.capturedAt))));}))),React.createElement(BottomNav));
+      }
+
+      // STATS
+      if(view==='stats'){
+        return React.createElement('div',{className:'min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 pb-20'},React.createElement('div',{className:'p-4'},React.createElement('h2',{className:'text-xl font-bold mb-4'},'📊 독서 통계'),React.createElement('div',{className:'grid grid-cols-2 gap-3 mb-6'},React.createElement('div',{className:'bg-white rounded-xl p-4 text-center shadow-sm'},React.createElement('p',{className:'text-3xl font-bold text-indigo-600'},stats.totalBooks),React.createElement('p',{className:'text-sm text-gray-500'},'전체 책')),React.createElement('div',{className:'bg-white rounded-xl p-4 text-center shadow-sm'},React.createElement('p',{className:'text-3xl font-bold text-green-600'},stats.completedBooks),React.createElement('p',{className:'text-sm text-gray-500'},'완독')),React.createElement('div',{className:'bg-white rounded-xl p-4 text-center shadow-sm'},React.createElement('p',{className:'text-3xl font-bold text-amber-600'},stats.readingBooks),React.createElement('p',{className:'text-sm text-gray-500'},'읽는 중')),React.createElement('div',{className:'bg-white rounded-xl p-4 text-center shadow-sm'},React.createElement('p',{className:'text-3xl font-bold text-purple-600'},stats.totalPassages),React.createElement('p',{className:'text-sm text-gray-500'},'총 글귀'))),stats.categoryData.length>0&&React.createElement('div',{className:'bg-white rounded-xl p-4 mb-4 shadow-sm'},React.createElement('h3',{className:'font-bold text-gray-700 mb-3'},'카테고리별 분포'),React.createElement(ResponsiveContainer,{width:'100%',height:200},React.createElement(PieChart,null,React.createElement(Pie,{data:stats.categoryData,cx:'50%',cy:'50%',outerRadius:60,dataKey:'value',label:({name,value})=>`${name}(${value})`},stats.categoryData.map((_,i)=>React.createElement(Cell,{key:i,fill:COLORS[i%COLORS.length]}))),React.createElement(Tooltip)))),stats.monthlyData.length>0&&React.createElement('div',{className:'bg-white rounded-xl p-4 shadow-sm'},React.createElement('h3',{className:'font-bold text-gray-700 mb-3'},'월별 글귀 기록'),React.createElement(ResponsiveContainer,{width:'100%',height:150},React.createElement(BarChart,{data:stats.monthlyData},React.createElement(XAxis,{dataKey:'month',tick:{fontSize:12}}),React.createElement(YAxis,{tick:{fontSize:12}}),React.createElement(Tooltip),React.createElement(Bar,{dataKey:'count',fill:'#6366f1',radius:[4,4,0,0]}))))),React.createElement(BottomNav));
+      }
+
+      // BOOK DETAIL
+      if(view==='book-detail'){
+        return React.createElement('div',{className:'min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 pb-24'},
+          showApiKey&&React.createElement(ApiKeyModal),
+          React.createElement('input',{type:'file',ref:fileInputRef,accept:'image/*',onChange:handleFileSelect,className:'hidden'}),
+          React.createElement('div',{className:'p-4'},
+            React.createElement('button',{onClick:()=>{setView('home');setSelectedBook(null);},className:'flex items-center gap-2 text-gray-600 mb-4'},React.createElement(Icon,{name:'ArrowLeft',className:'w-5 h-5'}),' 뒤로'),
+            React.createElement('div',{className:'bg-white rounded-2xl p-4 mb-4 shadow-sm'},React.createElement('div',{className:'flex items-center gap-2 mb-2'},React.createElement('span',{className:`px-2 py-0.5 text-xs rounded-full ${selectedBook.status==='completed'?'bg-green-100 text-green-700':'bg-indigo-100 text-indigo-700'}`},selectedBook.status==='completed'?'완독':'읽는 중'),React.createElement('span',{className:'text-xs text-gray-400'},selectedBook.category)),React.createElement('h2',{className:'text-xl font-bold text-gray-800'},selectedBook.title),selectedBook.author&&React.createElement('p',{className:'text-gray-500'},selectedBook.author),React.createElement('div',{className:'flex gap-2 mt-4'},selectedBook.status==='reading'&&React.createElement('button',{onClick:completeBook,className:'flex-1 flex items-center justify-center gap-2 p-3 bg-green-500 text-white rounded-xl'},React.createElement(Icon,{name:'Check',className:'w-4 h-4'}),' 완독'),React.createElement('button',{onClick:generateReview,className:'flex-1 flex items-center justify-center gap-2 p-3 bg-purple-500 text-white rounded-xl'},React.createElement(Icon,{name:'Sparkles',className:'w-4 h-4'}),' 독후감'))),
+            React.createElement('h3',{className:'font-bold text-gray-700 mb-3'},`📝 기록된 글귀 (${passages.length})`),
+            passages.length===0?React.createElement('div',{className:'text-center py-10 bg-white rounded-2xl'},React.createElement(Icon,{name:'FileText',className:'w-12 h-12 mx-auto text-gray-300 mb-3'}),React.createElement('p',{className:'text-gray-500'},'기록된 글귀가 없습니다')):
+            React.createElement('div',{className:'space-y-3'},passages.map(p=>React.createElement('div',{key:p.id,className:'bg-white rounded-2xl p-4 shadow-sm'},editingPassage?.id===p.id?React.createElement('div',null,React.createElement('textarea',{value:editingPassage.text,onChange:e=>setEditingPassage({...editingPassage,text:e.target.value}),className:'w-full p-3 border rounded-xl mb-2 min-h-[100px]'}),React.createElement('div',{className:'flex gap-2'},React.createElement('button',{onClick:()=>setEditingPassage(null),className:'flex-1 p-2 border rounded-xl text-sm'},'취소'),React.createElement('button',{onClick:()=>updatePassage(editingPassage),className:'flex-1 p-2 bg-indigo-600 text-white rounded-xl text-sm'},'저장'))):React.createElement(React.Fragment,null,p.imageUrl&&React.createElement('img',{src:p.imageUrl,alt:'',className:'w-full h-32 object-cover rounded-xl mb-3'}),React.createElement('div',{className:'flex items-center gap-2 text-xs text-gray-400 mb-2'},React.createElement(Icon,{name:'Calendar',className:'w-3 h-3'}),fmt(p.capturedAt)),React.createElement('p',{className:'text-gray-800 font-medium mb-2'},`"${p.text}"`),p.analysis&&React.createElement('div',{className:'bg-indigo-50 rounded-xl p-3 text-sm text-gray-600'},React.createElement('p',{className:'text-xs text-indigo-600 font-medium mb-1'},'💡 AI 분석'),p.analysis),React.createElement('div',{className:'flex justify-end gap-1 mt-3'},React.createElement('button',{onClick:e=>{e.preventDefault();e.stopPropagation();setEditingPassage(p);},className:'p-3 text-gray-400 hover:text-indigo-600 active:bg-indigo-50 rounded-full'},React.createElement(Icon,{name:'Edit3',className:'w-5 h-5'})),React.createElement('button',{onClick:e=>{e.preventDefault();e.stopPropagation();deletePassage(p.id);},className:'p-3 text-gray-400 hover:text-red-500 active:bg-red-50 rounded-full'},React.createElement(Icon,{name:'Trash2',className:'w-5 h-5'})))))))),
+          React.createElement('div',{className:'fixed bottom-20 right-4 flex flex-col gap-2'},React.createElement('button',{onClick:()=>fileInputRef.current?.click(),className:'w-12 h-12 bg-purple-500 text-white rounded-full shadow-lg flex items-center justify-center'},React.createElement(Icon,{name:'ImageIcon',className:'w-5 h-5'})),React.createElement('button',{onClick:startCamera,className:'w-12 h-12 bg-indigo-600 text-white rounded-full shadow-lg flex items-center justify-center'},React.createElement(Icon,{name:'Camera',className:'w-5 h-5'}))),
+          React.createElement(BottomNav));
+      }
+
+      // CAMERA
+      if(view==='camera'){
+        return React.createElement('div',{className:'fixed inset-0 bg-black'},React.createElement('video',{ref:videoRef,autoPlay:true,playsInline:true,className:'w-full h-full object-cover'}),React.createElement('canvas',{ref:canvasRef,className:'hidden'}),React.createElement('button',{onClick:()=>{stopCamera();setView('book-detail');},className:'absolute top-4 left-4 p-2 bg-black/50 rounded-full text-white'},React.createElement(Icon,{name:'X',className:'w-6 h-6'})),React.createElement('div',{className:'absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 to-transparent'},React.createElement('p',{className:'text-white text-center mb-4 text-sm'},'책 페이지를 프레임 안에 맞춰주세요'),React.createElement('button',{onClick:capturePhoto,className:'w-16 h-16 mx-auto bg-white rounded-full flex items-center justify-center'},React.createElement('div',{className:'w-12 h-12 bg-indigo-600 rounded-full'}))));
+      }
+
+      // ANALYZE
+      if(view==='analyze'){
+        return React.createElement('div',{className:'min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 p-4'},showApiKey&&React.createElement(ApiKeyModal),React.createElement('button',{onClick:()=>{setCapturedImage(null);setExtractedText('');setAiAnalysis('');setView('book-detail');},className:'flex items-center gap-2 text-gray-600 mb-4'},React.createElement(Icon,{name:'ArrowLeft',className:'w-5 h-5'}),' 취소'),capturedImage&&React.createElement('div',{className:'bg-white rounded-2xl p-3 mb-4 shadow-sm'},React.createElement('img',{src:capturedImage,alt:'',className:'w-full rounded-xl'})),isProcessing?React.createElement('div',{className:'bg-white rounded-2xl p-8 text-center shadow-sm'},React.createElement(Icon,{name:'Loader2',className:'w-10 h-10 mx-auto text-indigo-600 animate-spin mb-4'}),React.createElement('p',{className:'text-gray-600'},'AI가 텍스트를 인식하고 분석 중...')):React.createElement(React.Fragment,null,React.createElement('div',{className:'bg-white rounded-2xl p-4 mb-4 shadow-sm'},React.createElement('h3',{className:'font-bold text-gray-700 mb-2'},'📝 핵심 글귀'),React.createElement('textarea',{value:extractedText,onChange:e=>setExtractedText(e.target.value),className:'w-full p-3 border rounded-xl min-h-[120px]',placeholder:'인식된 텍스트 (수정 가능)'})),aiAnalysis&&React.createElement('div',{className:'bg-white rounded-2xl p-4 mb-4 shadow-sm'},React.createElement('h3',{className:'font-bold text-gray-700 mb-2'},'💡 AI 분석'),React.createElement('div',{className:'bg-indigo-50 rounded-xl p-4 text-gray-700 text-sm whitespace-pre-wrap'},aiAnalysis)),React.createElement('button',{onClick:savePassage,disabled:!extractedText,className:'w-full p-4 bg-indigo-600 text-white rounded-xl font-medium disabled:opacity-50'},'저장하기')));
+      }
+
+      // REVIEW
+      if(view==='review'){
+        return React.createElement('div',{className:'min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 p-4 pb-24'},React.createElement('button',{onClick:()=>setView('book-detail'),className:'flex items-center gap-2 text-gray-600 mb-4'},React.createElement(Icon,{name:'ArrowLeft',className:'w-5 h-5'}),' 뒤로'),React.createElement('div',{className:'bg-white rounded-2xl p-4 shadow-sm'},React.createElement('div',{className:'flex items-center justify-between mb-4'},React.createElement('div',{className:'flex items-center gap-2'},React.createElement(Icon,{name:'Sparkles',className:'w-5 h-5 text-purple-500'}),React.createElement('h2',{className:'text-lg font-bold text-gray-800'},'AI 독후감')),review&&React.createElement('div',{className:'flex gap-2'},React.createElement('button',{onClick:()=>exportReview('copy'),className:'p-2 text-gray-400 hover:text-indigo-600',title:'복사'},React.createElement(Icon,{name:'FileText',className:'w-5 h-5'})),React.createElement('button',{onClick:()=>exportReview('text'),className:'p-2 text-gray-400 hover:text-indigo-600',title:'다운로드'},React.createElement(Icon,{name:'Download',className:'w-5 h-5'})))),React.createElement('h3',{className:'text-xl font-bold text-gray-800 mb-1'},selectedBook.title),selectedBook.author&&React.createElement('p',{className:'text-gray-500 mb-4'},selectedBook.author),isProcessing?React.createElement('div',{className:'py-12 text-center'},React.createElement(Icon,{name:'Loader2',className:'w-10 h-10 mx-auto text-purple-600 animate-spin mb-4'}),React.createElement('p',{className:'text-gray-600'},'AI가 독후감을 작성 중...'),React.createElement('p',{className:'text-sm text-gray-400'},`${passages.length}개 글귀 분석 중`)):review?React.createElement('div',{className:'whitespace-pre-wrap text-gray-700 leading-relaxed'},review):React.createElement('p',{className:'text-gray-500 text-center py-8'},'독후감이 없습니다.')),React.createElement(BottomNav));
+      }
+
+      return null;
+    }
+
+    // Render
+    window.addEventListener('load',()=>{
+      setTimeout(()=>{document.getElementById('splash').classList.add('hide');},500);
+      ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+    });
+
+    // Register SW
+    if('serviceWorker' in navigator){navigator.serviceWorker.register('service-worker.js').catch(e=>console.log('SW error:',e));}
+  </script>
+</body>
+</html>
